@@ -1,0 +1,6 @@
+[package]
+name = "chip8-rust"
+version = "0.1.0"
+authors = ["Andy Summers <andrew.summers@wisc.edu>"]
+
+[dependencies]
