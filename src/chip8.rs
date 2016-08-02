@@ -84,6 +84,7 @@ impl Chip8 {
             0x1000 => self.jp_addr(),
             0x2000 => self.call_addr(),
             0x3000 => self.se_vx_byte(),
+            0x4000 => self.sne_vx_byte(),
             0x5000 => self.se_vx_vy(),
             0x6000 => self.ld_vx_byte(),
             0x7000 => self.add_vx_byte(),
@@ -94,12 +95,18 @@ impl Chip8 {
                     0x0002 => self.and_vx_vy(),
                     0x0003 => self.xor_vx_vy(),
                     0x0004 => self.add_vx_vy(),
+                    0x0005 => self.sub_vx_vy(),
+                    // TODO: 0x0006
+                    0x0007 => self.subn_vx_vy(),
+                    // TODO: 0x000E
                     _ => println!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 };
             },
+            // TODO: 0x9000
             0xA000 => self.ld_index_addr(),
             0xB000 => self.jp_v0_addr(),
+            // TODO: 0xC000
             0xD000 => self.drw_vx_vy_nib(),
             0xE000 => {
                 match self.instr & 0x00FF {
@@ -112,8 +119,14 @@ impl Chip8 {
             0xF000 => {
                 match self.instr & 0x00FF {
                     0x0007 => self.ld_vx_dt(),
-                    0x001E => self.add_index_vx(),
+                    // TODO: 0x000A
                     0x0015 => self.ld_dt_vx(),
+                    // TODO: 0x0018
+                    0x001E => self.add_index_vx(),
+                    // TODO: 0x0029
+                    // TODO: 0x0033
+                    // TODO: 0x0055
+                    // TODO: 0x0056
                     _ => println!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 }
@@ -133,8 +146,8 @@ impl Chip8 {
     /// Instruction: 0x00E0
     ///
     /// Clear the display.
-    /// TODO: Implement
     fn cls(&mut self) {
+        self.fb = [0; 64 * 32];
         self.pc += 0x2;
         println!("{:#06X}: CLS", self.instr);
     }
@@ -178,6 +191,20 @@ impl Chip8 {
             self.pc += 0x2;
         }
         println!("{:#06X}: SN V[{:X}], {:#06X}", self.instr, reg, byte);
+    }
+
+    /// Instruction: 0x4XNN
+    ///
+    /// Skip next instruction if V[X] != NN.
+    fn sne_vx_byte(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        let byte = (self.instr & 0x00FF) as u8;
+        if self.v[reg] != byte {
+            self.pc += 0x4;
+        } else {
+            self.pc += 0x2;
+        }
+        println!("{:#06X}: SNE V[{:X}], {:#06X}", self.instr, reg, byte);
     }
 
     /// Instruction: 0x5XY0
@@ -273,6 +300,41 @@ impl Chip8 {
             self.v[0xF] = 0x1;
         } else {
             self.v[reg_x] += self.v[reg_y];
+            self.v[0xF] = 0x0;
+        }
+        self.pc += 0x2;
+    }
+
+    /// Instruction: 0x8XY5
+    ///
+    /// Subtract V[Y] from V[X] and store the result in V[X]. If V[X] < V[Y],
+    /// set V[F] to 1 and subtract V[X] from V[Y].
+    fn sub_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        if self.v[reg_x] - self.v[reg_y] > 0x0 {
+            self.v[reg_x] -= self.v[reg_y]; 
+            self.v[0xF] = 0x0;
+        } else {
+            self.v[reg_x] = self.v[reg_y] - self.v[reg_x];
+            self.v[0xF] = 0x1;
+        }
+        self.pc += 0x2;
+    }
+
+    /// Instruction: 0x8XY7
+    ///
+    /// Subtract V[X] from V[Y] and store the result in V[X]. If V[X] < V[Y],
+    /// set V[F] to 1 and subtract V[X] from V[Y].
+    fn subn_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        if self.v[reg_y] - self.v[reg_x] > 0x0 {
+            self.v[reg_x] = self.v[reg_y] - self.v[reg_x]; 
+            self.v[0xF] = 0x1;
+        } else {
+            self.v[reg_x] = self.v[reg_x] - self.v[reg_y];
+            self.v[0xF] = 0x0;
         }
         self.pc += 0x2;
     }
