@@ -163,7 +163,7 @@ impl Chip8 {
 
     /// Instruction: 0x3XNN
     ///
-    /// Skip next instruction if `v[X]` == `NN`.
+    /// Skip next instruction if v[X] == NN.
     fn se_vx_byte(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         let byte = ((self.instr & 0x00FF) << 8) as u8;
@@ -172,27 +172,26 @@ impl Chip8 {
         } else {
             self.pc += 0x2;
         }
-        println!("{:#06X}: SN V[{:X}], {:#06X}",
-                 self.instr, (self.instr & 0x0F00 >> 8), (self.instr & 0x00FF));
+        println!("{:#06X}: SN V[{:X}], {:#06X}", self.instr, reg, byte);
     }
 
     /// Instruction: 0x5XY0
     ///
-    /// Skip next instruction if `v[X]` == `v[Y]`.
+    /// Skip next instruction if v[X] == v[Y].
     fn se_vx_vy(&mut self) {
-        let x = (self.instr & 0x0F00) as usize;
-        let y = (self.instr & 0x00F0) as usize;
-        if self.v[x] == self.v[y] {
+        let reg_x = (self.instr & 0x0F00) as usize;
+        let reg_y = (self.instr & 0x00F0) as usize;
+        if self.v[reg_x] == self.v[reg_y] {
             self.pc += 0x4;
             return;
         }
         self.pc += 0x2;
-        println!("{:#06X}: SE V[{:X}], V[{:X}]", self.instr, x, y);
+        println!("{:#06X}: SE V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x6XNN
     ///
-    /// Load `NN` into register V[X].
+    /// Load NN into register V[X].
     fn ld_vx_byte(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.v[reg] = (self.instr & 0x00FF) as u8;
@@ -203,7 +202,7 @@ impl Chip8 {
 
     /// Instruction: 0x7XNN
     ///
-    /// Add V[X] and `NN` and store the result in V[X].
+    /// Add V[X] and NN and store the result in V[X].
     fn add_vx_byte(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.v[reg] += ((self.instr & 0x00FF) << 8) as u8;
@@ -280,7 +279,7 @@ impl Chip8 {
         println!("{:#06X}: LD V[{:X}], dt", self.instr, reg);
     }
 
-    /// Instruction: 0xFN15
+    /// Instruction: 0xFX15
     ///
     /// Set delay timer to V[X].
     fn ld_dt_vx(&mut self) {
@@ -290,7 +289,7 @@ impl Chip8 {
         println!("{:#06X}: dt = V[{:X}]", self.instr, reg);
     }
 
-    /// Instruction: 0xFN1E
+    /// Instruction: 0xFX1E
     ///
     /// Add index and V[X] and store the result in index.
     fn add_index_vx(&mut self) {
