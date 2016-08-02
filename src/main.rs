@@ -13,7 +13,7 @@ fn main() {
 
     chip8.load_program(program);
 
-    for _ in 0..50 {
+    for _ in 0..200 {
         chip8.execute_cycle();
         println!("{:#?}\n", chip8);
     }

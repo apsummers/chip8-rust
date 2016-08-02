@@ -3,6 +3,8 @@ use std::fmt;
 use std::fs::File;
 use std::io::Read;
 
+extern crate rand;
+
 /// The Chip8
 pub struct Chip8 {
     // Addressable memory
@@ -96,17 +98,17 @@ impl Chip8 {
                     0x0003 => self.xor_vx_vy(),
                     0x0004 => self.add_vx_vy(),
                     0x0005 => self.sub_vx_vy(),
-                    // TODO: 0x0006
+                    0x0006 => self.shr_vx(),
                     0x0007 => self.subn_vx_vy(),
-                    // TODO: 0x000E
+                    0x000E => self.shl_vx(),
                     _ => println!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 };
             },
-            // TODO: 0x9000
+            0x9000 => self.sne_vx_vy(),
             0xA000 => self.ld_index_addr(),
             0xB000 => self.jp_v0_addr(),
-            // TODO: 0xC000
+            0xC000 => self.rnd_vx_byte(),
             0xD000 => self.drw_vx_vy_nib(),
             0xE000 => {
                 match self.instr & 0x00FF {
@@ -320,6 +322,20 @@ impl Chip8 {
             self.v[0xF] = 0x1;
         }
         self.pc += 0x2;
+        println!("{:#06X}: SUB V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+    }
+
+    /// Instruction: 0x8XY6
+    ///
+    /// Shift V[X] right by one bit and store the result in V[X]. Store the
+    /// value of the least significant bit of V[X] in V[F] before shifting. The
+    /// value for register Y is unused.
+    fn shr_vx(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        self.v[0xF] = self.v[reg_x] & 0x01;
+        self.v[reg_x] = self.v[reg_x] >> 1;
+        self.pc += 0x2;
+        println!("{:#06X}: SHR V[{:X}]", self.instr, reg_x);
     }
 
     /// Instruction: 0x8XY7
@@ -337,6 +353,34 @@ impl Chip8 {
             self.v[0xF] = 0x0;
         }
         self.pc += 0x2;
+        println!("{:#06X}: SUBN V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+    }
+
+    /// Instruction: 0x8XYE
+    ///
+    /// Shift V[X] left by one bit and store the result in V[X]. Store the
+    /// value of the most significant bit of V[X] in V[F] before shifting. The
+    /// value for register Y is unused.
+    fn shl_vx(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        self.v[0xF] = self.v[reg_x] & 0x80;
+        self.v[reg_x] = self.v[reg_x] << 1;
+        self.pc += 0x2;
+        println!("{:#06X}: SHL V[{:X}]", self.instr, reg_x);
+    }
+
+    /// Instruction: 0x9XY0
+    ///
+    /// Skip next instruction if V[X] != V[Y].
+    fn sne_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        if self.v[reg_x] != self.v[reg_y] {
+            self.pc += 0x4;
+        } else {
+            self.pc += 0x2;
+        }
+        println!("{:#06X}: SNE V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0xANNN
@@ -356,16 +400,28 @@ impl Chip8 {
         println!("{:#06X}: JP V[0], {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
+    /// Instruction: 0xCXNN
+    ///
+    /// Set V[X] to NN AND a random byte.
+    fn rnd_vx_byte(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        let byte = (self.instr & 0x00FF) as u8;
+        let rand_byte = rand::random::<u8>();
+        self.v[reg] = rand_byte & byte;
+        self.pc += 0x2;
+        println!("{:#06X}: RND V[{:X}], {:#06X}", self.instr, reg, byte);
+    }
+
     /// Instruction: 0xDXYN
     ///
     /// Draw sprite.
     fn drw_vx_vy_nib(&mut self) {
         let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
         let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
-        let byte = (self.instr & 0x000F) as u8;
+        let nib = (self.instr & 0x000F) as u8;
         self.pc += 0x2;
         println!("{:#06X}: DRW V[{:X}], V[{:X}], {:#06X}",
-                 self.instr, reg_x, reg_y, byte);
+                 self.instr, reg_x, reg_y, nib);
     }
 
     /// Instruction: 0xEX9E
@@ -375,6 +431,7 @@ impl Chip8 {
     fn skp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.pc += 0x2;
+        println!("{:#06X}: SKP V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xEXA1
@@ -384,6 +441,7 @@ impl Chip8 {
     fn sknp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.pc += 0x2;
+        println!("{:#06X}: SKNP V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX07
@@ -413,7 +471,7 @@ impl Chip8 {
         let byte = (self.instr & 0x0F00) >> 8;
         self.index += byte;
         self.pc += 0x2;
-        println!("{:#06X}: index += {:#06X}", self.instr, byte);
+        println!("{:#06X}: ADD index, {:#06X}", self.instr, byte);
     }
 
 }
