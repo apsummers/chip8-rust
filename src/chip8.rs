@@ -15,7 +15,7 @@ pub struct Chip8 {
     index: u16,
 
     // Stack
-    stack: [u8; 16],
+    stack: [u16; 16],
     sp: u8,
 
     // Timers
@@ -85,15 +85,21 @@ impl Chip8 {
             0xD000 => self.drw_vx_vy_nib(instr),
             0xF000 => {
                 match instr & 0x00FF {
+                    0x0007 => self.ld_vx_dt(instr),
                     0x001E => self.add_index_vx(instr),
                     0x0015 => self.ld_dt_vx(instr),
                     _ => println!("{:#X}: Unrecognized instruction", instr),
                 }
             },
             _ => {
-                println!("{:#X}: Unrecognized opcode in instruction", instr);
+                println!("{:#X}: Unrecognized opcode", instr);
                 self.pc += 0x2;
             },
+        }
+
+        // Update timers
+        if self.dt > 0 {
+            self.dt -= 1;
         }
     }
 
@@ -111,7 +117,8 @@ impl Chip8 {
     /// Return from a subroutine.
     /// TODO: Implement
     fn ret(&mut self, instr: u16) {
-        self.pc += 0x2;
+        self.pc = self.stack[self.sp as usize];
+        self.sp -= 1;
         println!("{:#X}: RET", instr);
     }
 
@@ -126,9 +133,10 @@ impl Chip8 {
     /// Instruction: 0x2NNN
     ///
     /// Call subroutine at 0xNNN.
-    /// TODO: Implement
     fn call_addr(&mut self, instr: u16) {
-        self.pc += 0x2;
+        self.sp += 0x2;
+        self.stack[self.sp as usize] = self.pc;
+        self.pc = instr & 0x0FFF;
         println!("{:#X}: CALL {:#X}", instr, instr & 0x0FFF);
     }
 
@@ -208,6 +216,16 @@ impl Chip8 {
         self.pc += 0x2;
         println!("{:#X}: DRW V[{:X}], V[{:X}], {:#X}",
                  instr, reg_x, reg_y, byte);
+    }
+
+    /// Instruction: 0xFX07
+    ///
+    /// Set delay timer to V[X].
+    fn ld_vx_dt(&mut self, instr: u16) {
+        let reg = ((instr & 0x0F00) >> 8) as usize;
+        self.v[reg] = self.dt;
+        self.pc += 0x2;
+        println!("{:#X}: LD V[{:X}], dt", instr, reg);
     }
 
     /// Instruction: 0xFN15
