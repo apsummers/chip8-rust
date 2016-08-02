@@ -123,12 +123,12 @@ impl Chip8 {
                     0x0007 => self.ld_vx_dt(),
                     // TODO: 0x000A
                     0x0015 => self.ld_dt_vx(),
-                    // TODO: 0x0018
+                    0x0018 => self.ld_st_vx(),
                     0x001E => self.add_index_vx(),
                     // TODO: 0x0029
                     // TODO: 0x0033
-                    // TODO: 0x0055
-                    // TODO: 0x0056
+                    0x0055 => self.ld_index_imm_vx(),
+                    // TODO: 0x0065
                     _ => println!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 }
@@ -159,7 +159,7 @@ impl Chip8 {
     /// Return from a subroutine.
     fn ret(&mut self) {
         self.pc = self.stack[self.sp as usize];
-        self.sp -= 0x2;
+        self.sp -= 0x1;
         println!("{:#06X}: RET", self.instr);
     }
 
@@ -175,7 +175,7 @@ impl Chip8 {
     ///
     /// Call subroutine at 0xNNN.
     fn call_addr(&mut self) {
-        self.sp += 0x2;
+        self.sp += 0x1;
         self.stack[self.sp as usize] = self.pc;
         self.pc = self.instr & 0x0FFF;
         println!("{:#06X}: CALL {:#06X}", self.instr, self.instr & 0x0FFF);
@@ -464,6 +464,16 @@ impl Chip8 {
         println!("{:#06X}: dt = V[{:X}]", self.instr, reg);
     }
 
+    /// Instruction: 0xFX18
+    ///
+    /// Set sound timer to V[X].
+    fn ld_st_vx(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.st = self.v[reg];
+        self.pc += 0x2;
+        println!("{:#06X}: st = V[{:X}]", self.instr, reg);
+    }
+
     /// Instruction: 0xFX1E
     ///
     /// Add index and V[X] and store the result in index.
@@ -472,6 +482,21 @@ impl Chip8 {
         self.index += byte;
         self.pc += 0x2;
         println!("{:#06X}: ADD index, {:#06X}", self.instr, byte);
+    }
+
+    /// Instruction: 0xFX55
+    ///
+    /// Store V[0] to V[X] in memory starting at the address in the index
+    /// register. Set index to index + X + 1.
+    fn ld_index_imm_vx(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        for i in 0x0..reg + 0x1 {
+            self.memory[self.index as usize] = self.v[i];
+            self.index += 0x1;
+        }
+        self.index += 0x1;
+        self.pc += 0x2;
+        println!("{:#06X}: LD [index], V[{:X}]", self.instr, reg);
     }
 
 }
