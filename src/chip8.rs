@@ -1,7 +1,6 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
 
 /// The Chip8
 pub struct Chip8 {
@@ -70,9 +69,9 @@ impl Chip8 {
         match opcode {
             0x0000 => {
                 match instr {
-                    0x00E0 => self.cls(),
-                    0x00EE => self.ret(),
-                    _ => println!("Unrecognized instruction: {:x}", instr),
+                    0x00E0 => self.cls(instr),
+                    0x00EE => self.ret(instr),
+                    _ => println!("Unrecognized instruction: {:#X}", instr),
                 }
             },
             0x1000 => self.jp_addr(instr),
@@ -88,11 +87,11 @@ impl Chip8 {
                 match instr & 0x00FF {
                     0x001E => self.add_index_vx(instr),
                     0x0015 => self.ld_dt_vx(instr),
-                    _ => println!("Unrecognized instruction: {:x}", instr),
+                    _ => println!("{:#X}: Unrecognized instruction", instr),
                 }
             },
             _ => {
-                println!("Unrecognized opcode in instruction: {:x}", instr);
+                println!("{:#X}: Unrecognized opcode in instruction", instr);
                 self.pc += 0x2;
             },
         }
@@ -101,13 +100,19 @@ impl Chip8 {
     /// Instruction: 0x00E0
     ///
     /// Clear the display.
-    fn cls(&mut self) {
-        println!("Clear display");
+    /// TODO: Implement
+    fn cls(&mut self, instr: u16) {
+        self.pc += 0x2;
+        println!("{:#X}: CLS", instr);
     }
 
-    fn ret(&mut self) {
-        println!("Return from subroutine");
+    /// Instruction: 0x00EE
+    ///
+    /// Return from a subroutine.
+    /// TODO: Implement
+    fn ret(&mut self, instr: u16) {
         self.pc += 0x2;
+        println!("{:#X}: RET", instr);
     }
 
     /// Instruction: 0x1NNN
@@ -115,15 +120,16 @@ impl Chip8 {
     /// Jump to location 0xNNN.
     fn jp_addr(&mut self, instr: u16) {
         self.pc = instr & 0x0FFF;
-        println!("{:x}: Jump to {:x}", instr, instr & 0x0FFF);
+        println!("{:#X}: JP {:#X}", instr, instr & 0x0FFF);
     }
 
     /// Instruction: 0x2NNN
     ///
     /// Call subroutine at 0xNNN.
+    /// TODO: Implement
     fn call_addr(&mut self, instr: u16) {
-        println!("{:x}: Call subroutine at {:x}", instr, instr & 0x0FFF);
         self.pc += 0x2;
+        println!("{:#X}: CALL {:#X}", instr, instr & 0x0FFF);
     }
 
     /// Instruction: 0x3XNN
@@ -137,7 +143,7 @@ impl Chip8 {
         } else {
             self.pc += 0x2;
         }
-        println!("{:x}: Skip next instruction if v[{:x}] == {:x}",
+        println!("{:#X}: SN V[{:X}], {:#X}",
                  instr, (instr & 0x0F00 >> 8), (instr & 0x00FF));
     }
 
@@ -152,8 +158,7 @@ impl Chip8 {
             return;
         }
         self.pc += 0x2;
-        println!("{:x}: Skip next instruction if v[{:x}] == v[{:x}]",
-                 instr, x, y);
+        println!("{:#X}: SE V[{:X}], V[{:X}]", instr, x, y);
     }
 
     /// Instruction: 0x6XNN
@@ -163,8 +168,7 @@ impl Chip8 {
         let reg = ((instr & 0x0F00) >> 8) as usize;
         self.v[reg] = (instr & 0x00FF) as u8;
         self.pc += 2;
-        println!("{:x}: Load {:x} into register V[{:x}]",
-                 instr, (instr & 0x00FF), reg);
+        println!("{:#X}: LD {:#X}, V[{:X}]", instr, (instr & 0x00FF), reg);
     }
 
     /// Instruction: 0x7XNN
@@ -174,32 +178,36 @@ impl Chip8 {
         let reg = ((instr & 0x0F00) >> 8) as usize;
         self.v[reg] += ((instr & 0x00FF) << 8) as u8;
         self.pc += 0x2;
-        println!("{:x}: V[{:x}] += {:x}", instr, reg, instr & 0x00FF);
+        println!("{:#X}: V[{:X}] += {:#X}", instr, reg, instr & 0x00FF);
     }
 
     /// Instruction: 0xANNN
     ///
     /// Set index register to 0xNNN.
     fn ld_index_addr(&mut self, instr: u16) {
-        println!("{:x}: Set index to {:x}", instr, instr & 0x0FFF);
         self.index = instr & 0x0FFF;
         self.pc += 0x2;
+        println!("{:#X}: LD index, {:#X}", instr, instr & 0x0FFF);
     }
 
     /// Instruction: 0xBNNN
     ///
     /// Jump to location 0xNNN + V[0].
     fn jp_v0_addr(&mut self, instr: u16) {
-        println!("{:x}: Jump to address {:x} + V[0]", instr, instr & 0x0FFF);
         self.pc = (instr & 0x0FFF) + (self.v[0] as u16);
+        println!("{:#X}: JP V[0], {:#X}", instr, instr & 0x0FFF);
     }
 
     /// Instruction: 0xDXYN
     ///
     /// Draw sprite.
     fn drw_vx_vy_nib(&mut self, instr: u16) {
-        println!("{:x}: Draw sprite", instr);
+        let reg_x = ((instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((instr & 0x00F0) >> 4) as usize;
+        let byte = (instr & 0x000F) as u8;
         self.pc += 0x2;
+        println!("{:#X}: DRW V[{:X}], V[{:X}], {:#X}",
+                 instr, reg_x, reg_y, byte);
     }
 
     /// Instruction: 0xFN15
@@ -209,7 +217,7 @@ impl Chip8 {
         let reg = ((instr & 0x0F00) >> 8) as usize;
         self.dt = self.v[reg];
         self.pc += 0x2;
-        println!("{:x}: dt = V[{:x}]", instr, reg);
+        println!("{:#X}: dt = V[{:X}]", instr, reg);
     }
 
     /// Instruction: 0xFN1E
@@ -219,7 +227,7 @@ impl Chip8 {
         let byte = (instr & 0x0F00) >> 8;
         self.index += byte;
         self.pc += 0x2;
-        println!("{:x}: index += {:x}", instr, byte);
+        println!("{:#X}: index += {:#X}", instr, byte);
     }
 
 }
