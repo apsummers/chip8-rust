@@ -16,4 +16,6 @@ fn main() {
     for _ in 0..200 {
         chip8.execute_cycle();
     }
+
+    println!("{:#?}", chip8);
 }

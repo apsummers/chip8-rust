@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::fmt;
 use std::fs::File;
 use std::io::Read;
 
@@ -9,6 +10,9 @@ pub struct Chip8 {
 
     // Program counter
     pc: u16,
+    
+    // Currently executing instruction
+    instr: u16,
 
     // Registers
     v: [u8; 16],
@@ -30,15 +34,16 @@ impl Chip8 {
     /// Construct a new Chip8.
     pub fn new() -> Chip8 {
         Chip8 {
-            memory: [0; 4096],
+            memory: [0x0; 4096],
             pc: 0x200,
-            v: [0; 16],
-            index: 0,
-            stack: [0; 16],
-            sp: 0,
-            dt: 0,
-            st: 0,
-            fb: [0; 64 * 32],
+            instr: 0x0,
+            v: [0x0; 16],
+            index: 0x0,
+            stack: [0x0; 16],
+            sp: 0x0,
+            dt: 0x0,
+            st: 0x0,
+            fb: [0x0; 64 * 32],
         }
     }
 
@@ -61,38 +66,55 @@ impl Chip8 {
     /// Execute a single instruction, emulating a CPU cycle.
     pub fn execute_cycle(&mut self) {
         // Fetch instruction
-        let instr = (self.memory[self.pc as usize] as u16) << 8 |
+        self.instr = (self.memory[self.pc as usize] as u16) << 8 |
                     self.memory[(self.pc + 1) as usize] as u16;
         // Get opcode, which is the first byte of the instruction
-        let opcode = instr & 0xF000;
+        let opcode = self.instr & 0xF000;
 
         match opcode {
             0x0000 => {
-                match instr {
-                    0x00E0 => self.cls(instr),
-                    0x00EE => self.ret(instr),
-                    _ => println!("Unrecognized instruction: {:#X}", instr),
+                match self.instr {
+                    0x00E0 => self.cls(),
+                    0x00EE => self.ret(),
+                    _ => println!("Unrecognized instruction: {:#06X}",
+                                  self.instr),
                 }
             },
-            0x1000 => self.jp_addr(instr),
-            0x2000 => self.call_addr(instr),
-            0x3000 => self.se_vx_byte(instr),
-            0x5000 => self.se_vx_vy(instr),
-            0x6000 => self.ld_vx_byte(instr),
-            0x7000 => self.add_vx_byte(instr),
-            0xA000 => self.ld_index_addr(instr),
-            0xB000 => self.jp_v0_addr(instr),
-            0xD000 => self.drw_vx_vy_nib(instr),
+            0x1000 => self.jp_addr(),
+            0x2000 => self.call_addr(),
+            0x3000 => self.se_vx_byte(),
+            0x5000 => self.se_vx_vy(),
+            0x6000 => self.ld_vx_byte(),
+            0x7000 => self.add_vx_byte(),
+            0x8000 => {
+                match self.instr & 0x000F {
+                    0x0000 => self.ld_vx_vy(),
+                    _ => println!("{:#06X}: Unrecognized instruction",
+                                  self.instr),
+                };
+            },
+            0xA000 => self.ld_index_addr(),
+            0xB000 => self.jp_v0_addr(),
+            0xD000 => self.drw_vx_vy_nib(),
+            0xE000 => {
+                match self.instr & 0x00FF {
+                    0x009E => self.skp_vx(),
+                    0x00A1 => self.sknp_vx(),
+                    _ => println!("{:#06X}: Unrecognized instruction",
+                                  self.instr),
+                }
+            },
             0xF000 => {
-                match instr & 0x00FF {
-                    0x0007 => self.ld_vx_dt(instr),
-                    0x001E => self.add_index_vx(instr),
-                    0x0015 => self.ld_dt_vx(instr),
-                    _ => println!("{:#X}: Unrecognized instruction", instr),
+                match self.instr & 0x00FF {
+                    0x0007 => self.ld_vx_dt(),
+                    0x001E => self.add_index_vx(),
+                    0x0015 => self.ld_dt_vx(),
+                    _ => println!("{:#06X}: Unrecognized instruction",
+                                  self.instr),
                 }
             },
             _ => {
-                println!("{:#X}: Unrecognized opcode", instr);
+                println!("{:#06X}: Unrecognized opcode", self.instr);
                 self.pc += 0x2;
             },
         }
@@ -107,146 +129,186 @@ impl Chip8 {
     ///
     /// Clear the display.
     /// TODO: Implement
-    fn cls(&mut self, instr: u16) {
+    fn cls(&mut self) {
         self.pc += 0x2;
-        println!("{:#X}: CLS", instr);
+        println!("{:#06X}: CLS", self.instr);
     }
 
     /// Instruction: 0x00EE
     ///
     /// Return from a subroutine.
-    /// TODO: Implement
-    fn ret(&mut self, instr: u16) {
+    fn ret(&mut self) {
         self.pc = self.stack[self.sp as usize];
-        self.sp -= 1;
-        println!("{:#X}: RET", instr);
+        self.sp -= 0x2;
+        println!("{:#06X}: RET", self.instr);
     }
 
     /// Instruction: 0x1NNN
     ///
     /// Jump to location 0xNNN.
-    fn jp_addr(&mut self, instr: u16) {
-        self.pc = instr & 0x0FFF;
-        println!("{:#X}: JP {:#X}", instr, instr & 0x0FFF);
+    fn jp_addr(&mut self) {
+        self.pc = self.instr & 0x0FFF;
+        println!("{:#06X}: JP {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0x2NNN
     ///
     /// Call subroutine at 0xNNN.
-    fn call_addr(&mut self, instr: u16) {
+    fn call_addr(&mut self) {
         self.sp += 0x2;
         self.stack[self.sp as usize] = self.pc;
-        self.pc = instr & 0x0FFF;
-        println!("{:#X}: CALL {:#X}", instr, instr & 0x0FFF);
+        self.pc = self.instr & 0x0FFF;
+        println!("{:#06X}: CALL {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0x3XNN
     ///
     /// Skip next instruction if `v[X]` == `NN`.
-    fn se_vx_byte(&mut self, instr: u16) {
-        let reg = ((instr & 0x0F00) >> 8) as usize;
-        let byte = ((instr & 0x00FF) << 8) as u8;
+    fn se_vx_byte(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        let byte = ((self.instr & 0x00FF) << 8) as u8;
         if self.v[reg] == byte {
             self.pc += 0x4;
         } else {
             self.pc += 0x2;
         }
-        println!("{:#X}: SN V[{:X}], {:#X}",
-                 instr, (instr & 0x0F00 >> 8), (instr & 0x00FF));
+        println!("{:#06X}: SN V[{:X}], {:#06X}",
+                 self.instr, (self.instr & 0x0F00 >> 8), (self.instr & 0x00FF));
     }
 
     /// Instruction: 0x5XY0
     ///
     /// Skip next instruction if `v[X]` == `v[Y]`.
-    fn se_vx_vy(&mut self, instr: u16) {
-        let x = (instr & 0x0F00) as usize;
-        let y = (instr & 0x00F0) as usize;
+    fn se_vx_vy(&mut self) {
+        let x = (self.instr & 0x0F00) as usize;
+        let y = (self.instr & 0x00F0) as usize;
         if self.v[x] == self.v[y] {
             self.pc += 0x4;
             return;
         }
         self.pc += 0x2;
-        println!("{:#X}: SE V[{:X}], V[{:X}]", instr, x, y);
+        println!("{:#06X}: SE V[{:X}], V[{:X}]", self.instr, x, y);
     }
 
     /// Instruction: 0x6XNN
     ///
     /// Load `NN` into register V[X].
-    fn ld_vx_byte(&mut self, instr: u16) {
-        let reg = ((instr & 0x0F00) >> 8) as usize;
-        self.v[reg] = (instr & 0x00FF) as u8;
+    fn ld_vx_byte(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.v[reg] = (self.instr & 0x00FF) as u8;
         self.pc += 2;
-        println!("{:#X}: LD {:#X}, V[{:X}]", instr, (instr & 0x00FF), reg);
+        println!("{:#06X}: LD {:#06X}, V[{:X}]",
+                 self.instr, (self.instr & 0x00FF), reg);
     }
 
     /// Instruction: 0x7XNN
     ///
     /// Add V[X] and `NN` and store the result in V[X].
-    fn add_vx_byte(&mut self, instr: u16) {
-        let reg = ((instr & 0x0F00) >> 8) as usize;
-        self.v[reg] += ((instr & 0x00FF) << 8) as u8;
+    fn add_vx_byte(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.v[reg] += ((self.instr & 0x00FF) << 8) as u8;
         self.pc += 0x2;
-        println!("{:#X}: V[{:X}] += {:#X}", instr, reg, instr & 0x00FF);
+        println!("{:#06X}: V[{:X}] += {:#06X}",
+                 self.instr, reg, self.instr & 0x00FF);
+    }
+
+    /// Instruction: 0x8XY0
+    ///
+    /// Load V[Y] into V[X].
+    fn ld_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        self.v[reg_x] = self.v[reg_y];
+        self.pc += 0x2;
+        println!("{:#06X}: LD V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0xANNN
     ///
     /// Set index register to 0xNNN.
-    fn ld_index_addr(&mut self, instr: u16) {
-        self.index = instr & 0x0FFF;
+    fn ld_index_addr(&mut self) {
+        self.index = self.instr & 0x0FFF;
         self.pc += 0x2;
-        println!("{:#X}: LD index, {:#X}", instr, instr & 0x0FFF);
+        println!("{:#06X}: LD index, {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0xBNNN
     ///
     /// Jump to location 0xNNN + V[0].
-    fn jp_v0_addr(&mut self, instr: u16) {
-        self.pc = (instr & 0x0FFF) + (self.v[0] as u16);
-        println!("{:#X}: JP V[0], {:#X}", instr, instr & 0x0FFF);
+    fn jp_v0_addr(&mut self) {
+        self.pc = (self.instr & 0x0FFF) + (self.v[0] as u16);
+        println!("{:#06X}: JP V[0], {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0xDXYN
     ///
     /// Draw sprite.
-    fn drw_vx_vy_nib(&mut self, instr: u16) {
-        let reg_x = ((instr & 0x0F00) >> 8) as usize;
-        let reg_y = ((instr & 0x00F0) >> 4) as usize;
-        let byte = (instr & 0x000F) as u8;
+    fn drw_vx_vy_nib(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        let byte = (self.instr & 0x000F) as u8;
         self.pc += 0x2;
-        println!("{:#X}: DRW V[{:X}], V[{:X}], {:#X}",
-                 instr, reg_x, reg_y, byte);
+        println!("{:#06X}: DRW V[{:X}], V[{:X}], {:#06X}",
+                 self.instr, reg_x, reg_y, byte);
+    }
+
+    /// Instruction: 0xEX9E
+    ///
+    /// Skip next instruction if the key with the value of V[X] is pressed.
+    /// TODO: Implement
+    fn skp_vx(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.pc += 0x2;
+    }
+
+    /// Instruction: 0xEXA1
+    ///
+    /// Skip next instruction if the key with the value of V[X] is not pressed.
+    /// TODO: Implement
+    fn sknp_vx(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.pc += 0x2;
     }
 
     /// Instruction: 0xFX07
     ///
     /// Set delay timer to V[X].
-    fn ld_vx_dt(&mut self, instr: u16) {
-        let reg = ((instr & 0x0F00) >> 8) as usize;
+    fn ld_vx_dt(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.v[reg] = self.dt;
         self.pc += 0x2;
-        println!("{:#X}: LD V[{:X}], dt", instr, reg);
+        println!("{:#06X}: LD V[{:X}], dt", self.instr, reg);
     }
 
     /// Instruction: 0xFN15
     ///
     /// Set delay timer to V[X].
-    fn ld_dt_vx(&mut self, instr: u16) {
-        let reg = ((instr & 0x0F00) >> 8) as usize;
+    fn ld_dt_vx(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.dt = self.v[reg];
         self.pc += 0x2;
-        println!("{:#X}: dt = V[{:X}]", instr, reg);
+        println!("{:#06X}: dt = V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFN1E
     ///
     /// Add index and V[X] and store the result in index.
-    fn add_index_vx(&mut self, instr: u16) {
-        let byte = (instr & 0x0F00) >> 8;
+    fn add_index_vx(&mut self) {
+        let byte = (self.instr & 0x0F00) >> 8;
         self.index += byte;
         self.pc += 0x2;
-        println!("{:#X}: index += {:#X}", instr, byte);
+        println!("{:#06X}: index += {:#06X}", self.instr, byte);
     }
 
+}
+
+impl fmt::Debug for Chip8 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+"Chip8 {{
+    pc: {:#06X}\tinstr: {:#06X}\tsp: {:#06X}\tindex: {:#06X}
+}}", 
+        self.pc, self.instr, self.sp, self.index)
+    }
 }
 
