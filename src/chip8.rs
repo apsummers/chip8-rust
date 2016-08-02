@@ -52,7 +52,8 @@ impl Chip8 {
         // Attempt to load the program from a file
         let bin = match File::open(&program) {
             Ok(bin) => bin,
-            Err(err) => panic!("Couldn't open {}: {}", program, err.description()),
+            Err(err) => panic!("Couldn't open {}: {}",
+                               program, err.description()),
         };
 
         // Copy bytes into Chip8's memory
@@ -89,6 +90,10 @@ impl Chip8 {
             0x8000 => {
                 match self.instr & 0x000F {
                     0x0000 => self.ld_vx_vy(),
+                    0x0001 => self.or_vx_vy(),
+                    0x0002 => self.and_vx_vy(),
+                    0x0003 => self.xor_vx_vy(),
+                    0x0004 => self.add_vx_vy(),
                     _ => println!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 };
@@ -166,7 +171,7 @@ impl Chip8 {
     /// Skip next instruction if v[X] == NN.
     fn se_vx_byte(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
-        let byte = ((self.instr & 0x00FF) << 8) as u8;
+        let byte = (self.instr & 0x00FF) as u8;
         if self.v[reg] == byte {
             self.pc += 0x4;
         } else {
@@ -179,13 +184,13 @@ impl Chip8 {
     ///
     /// Skip next instruction if v[X] == v[Y].
     fn se_vx_vy(&mut self) {
-        let reg_x = (self.instr & 0x0F00) as usize;
-        let reg_y = (self.instr & 0x00F0) as usize;
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
         if self.v[reg_x] == self.v[reg_y] {
             self.pc += 0x4;
-            return;
+        } else {
+            self.pc += 0x2;
         }
-        self.pc += 0x2;
         println!("{:#06X}: SE V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
@@ -196,8 +201,8 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.v[reg] = (self.instr & 0x00FF) as u8;
         self.pc += 2;
-        println!("{:#06X}: LD {:#06X}, V[{:X}]",
-                 self.instr, (self.instr & 0x00FF), reg);
+        println!("{:#06X}: LD V[{:X}], {:#06X}",
+                 self.instr, reg, (self.instr & 0x00FF));
     }
 
     /// Instruction: 0x7XNN
@@ -205,9 +210,9 @@ impl Chip8 {
     /// Add V[X] and NN and store the result in V[X].
     fn add_vx_byte(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
-        self.v[reg] += ((self.instr & 0x00FF) << 8) as u8;
+        self.v[reg] += (self.instr & 0x00FF) as u8;
         self.pc += 0x2;
-        println!("{:#06X}: V[{:X}] += {:#06X}",
+        println!("{:#06X}: ADD V[{:X}], {:#06X}",
                  self.instr, reg, self.instr & 0x00FF);
     }
 
@@ -220,6 +225,56 @@ impl Chip8 {
         self.v[reg_x] = self.v[reg_y];
         self.pc += 0x2;
         println!("{:#06X}: LD V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+    }
+
+    /// Instruction: 0x8XY1
+    ///
+    /// Take bitwise OR of V[X] and V[Y] and store the result in V[X].
+    fn or_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        self.v[reg_x] |= self.v[reg_y];
+        self.pc += 0x2;
+        println!("{:#06X}: OR V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+    }
+
+    /// Instruction: 0x8XY2
+    ///
+    /// Take bitwise AND of V[X] and V[Y] and store the result in V[X].
+    fn and_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        self.v[reg_x] &= self.v[reg_y];
+        self.pc += 0x2;
+        println!("{:#06X}: AND V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+    }
+
+    /// Instruction: 0x8XY3
+    ///
+    /// Take bitwise XOR of V[X] and V[Y] and store the result in V[X].
+    fn xor_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        self.v[reg_x] ^= self.v[reg_y];
+        self.pc += 0x2;
+        println!("{:#06X}: XOR V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+    }
+
+    /// Instruction: 0x8XY4
+    ///
+    /// Add V[X] and V[Y] and store the result in V[X]. Set V[F] to 1 if there
+    /// is a carry (i.e. result > 255), otherwise 0. Only the lowest 8 bits are
+    /// kept.
+    fn add_vx_vy(&mut self) {
+        let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
+        let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
+        if (self.v[reg_x] as u16) + (self.v[reg_y] as u16) > 0xFF {
+            self.v[reg_x] = 0xFF;
+            self.v[0xF] = 0x1;
+        } else {
+            self.v[reg_x] += self.v[reg_y];
+        }
+        self.pc += 0x2;
     }
 
     /// Instruction: 0xANNN

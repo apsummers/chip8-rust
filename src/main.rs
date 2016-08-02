@@ -13,9 +13,9 @@ fn main() {
 
     chip8.load_program(program);
 
-    for _ in 0..200 {
+    for _ in 0..30 {
         chip8.execute_cycle();
+        println!("{:#?}\n", chip8);
     }
 
-    println!("{:#?}", chip8);
 }
