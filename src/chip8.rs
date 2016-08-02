@@ -306,9 +306,20 @@ impl fmt::Debug for Chip8 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
 "Chip8 {{
-    pc: {:#06X}\tinstr: {:#06X}\tsp: {:#06X}\tindex: {:#06X}
+    pc: {:#06X}\tinstr: {:#06X}\tsp: {:#06X}\tindex: {:#06X}\n
+    v[0]: {:#06X}, v[1]: {:#06X}, v[2]: {:#06X}, v[3]: {:#06X}
+    v[4]: {:#06X}, v[5]: {:#06X}, v[6]: {:#06X}, v[7]: {:#06X}
+    v[8]: {:#06X}, v[9]: {:#06X}, v[A]: {:#06X}, v[B]: {:#06X}
+    v[C]: {:#06X}, v[D]: {:#06X}, v[E]: {:#06X}, v[F]: {:#06X}\n
+    dt: {:#06X}\tst: {:#06X}
 }}", 
-        self.pc, self.instr, self.sp, self.index)
+               self.pc, self.instr, self.sp, self.index,
+               self.v[0x0], self.v[0x1], self.v[0x2], self.v[0x3],
+               self.v[0x4], self.v[0x5], self.v[0x6], self.v[0x7],
+               self.v[0x8], self.v[0x9], self.v[0xA], self.v[0xB],
+               self.v[0xC], self.v[0xD], self.v[0xE], self.v[0xF],
+               self.dt, self.st
+        )
     }
 }
 
