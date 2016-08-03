@@ -14,7 +14,7 @@ fn main() {
     chip8.load_font_set();
     chip8.load_program(program);
 
-    for _ in 0..1000 {
+    for _ in 0..100 {
         chip8.execute_cycle();
         println!("{:#?}\n", chip8);
     }

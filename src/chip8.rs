@@ -70,7 +70,7 @@ impl Chip8 {
             0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         ];
 
-        let mut i = 0x0;
+        let mut i = 0x50;
         for byte in font_set.bytes() {
             self.memory[i] = byte.unwrap();
             i += 1;
@@ -94,6 +94,20 @@ impl Chip8 {
         }
     }
 
+    /// Print the contents of the frame buffer.
+    pub fn print_fb(&mut self) {
+        for i in 0..32 {
+            for j in 0..64 {
+                if self.fb[((i * 64) + j) as usize] == 1 {
+                    print!("█");
+                } else {
+                    print!("_");
+                }
+            }
+            println!("");
+        }
+    }
+
     /// Execute a single instruction, emulating a CPU cycle.
     pub fn execute_cycle(&mut self) {
         // Fetch instruction
@@ -107,7 +121,7 @@ impl Chip8 {
                 match self.instr {
                     0x00E0 => self.cls(),
                     0x00EE => self.ret(),
-                    _ => println!("Unrecognized instruction: {:#06X}",
+                    _ => panic!("Unrecognized instruction: {:#06X}",
                                   self.instr),
                 }
             },
@@ -129,7 +143,7 @@ impl Chip8 {
                     0x0006 => self.shr_vx(),
                     0x0007 => self.subn_vx_vy(),
                     0x000E => self.shl_vx(),
-                    _ => println!("{:#06X}: Unrecognized instruction",
+                    _ => panic!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 };
             },
@@ -142,7 +156,7 @@ impl Chip8 {
                 match self.instr & 0x00FF {
                     0x009E => self.skp_vx(),
                     0x00A1 => self.sknp_vx(),
-                    _ => println!("{:#06X}: Unrecognized instruction",
+                    _ => panic!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 }
             },
@@ -157,13 +171,12 @@ impl Chip8 {
                     0x0033 => self.ld_bcd_vx(),
                     0x0055 => self.ld_index_imm_vx(),
                     0x0065 => self.ld_vx_index_imm(),
-                    _ => println!("{:#06X}: Unrecognized instruction",
+                    _ => panic!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 }
             },
             _ => {
-                println!("{:#06X}: Unrecognized opcode", self.instr);
-                self.pc += 0x2;
+                panic!("{:#06X}: Unrecognized opcode", self.instr);
             },
         }
 
@@ -442,14 +455,39 @@ impl Chip8 {
 
     /// Instruction: 0xDXYN
     ///
-    /// Draw sprite.
+    /// Draw sprite at coordinates (V[X], V[Y]) with height N and width 8
+    /// pixels. If any pixels are overwritten, set V[F] to 1.
     fn drw_vx_vy_nib(&mut self) {
         let reg_x = ((self.instr & 0x0F00) >> 8) as usize;
         let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
-        let nib = (self.instr & 0x000F) as u8;
+        let height = (self.instr & 0x000F) as u8;
+        let x_coord = self.v[reg_x as usize] as usize;
+        let y_coord = self.v[reg_y as usize] as usize;
+        let mut pixel: u8;
+
+        // Clear V[F] before detecting collisions
+        self.v[0xF] = 0;
+
+        // XOR bytes into framebuffer
+        for y in 0..height {
+            pixel = self.memory[(self.index as usize) + (y as usize)];
+            for x in 0..8 {
+                let pixel_index = ((x_coord + (x as usize)) + 
+                                   ((y_coord + (y as usize)) * 64)) as usize;
+                // Check for collision and set V[F] as appropriate
+                if pixel & (0x80 >> (x as u8)) != 0 {
+                    if self.fb[pixel_index] == 1 {
+                        self.v[0xF] = 0x1;
+                    }
+                    self.fb[pixel_index] ^= 0x1;
+                }
+            }
+        }
+
         self.pc += 0x2;
+        self.print_fb();
         println!("{:#06X}: DRW V[{:X}], V[{:X}], {:#06X}",
-                 self.instr, reg_x, reg_y, nib);
+                 self.instr, reg_x, reg_y, height);
     }
 
     /// Instruction: 0xEX9E
@@ -519,7 +557,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.index += self.v[reg] as u16;
         self.pc += 0x2;
-        println!("{:#06X}: ADD index, {:#06X}", self.instr, reg);
+        println!("{:#06X}: ADD index, V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX29
