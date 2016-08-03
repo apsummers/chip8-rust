@@ -11,6 +11,7 @@ fn main() {
     let mut chip8 = chip8::Chip8::new();
     let program = env::args().nth(1).unwrap();
 
+    chip8.load_font_set();
     chip8.load_program(program);
 
     for _ in 0..1000 {
