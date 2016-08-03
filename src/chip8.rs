@@ -128,7 +128,7 @@ impl Chip8 {
                     // TODO: 0x0029
                     // TODO: 0x0033
                     0x0055 => self.ld_index_imm_vx(),
-                    // TODO: 0x0065
+                    0x0065 => self.ld_vx_index_imm(),
                     _ => println!("{:#06X}: Unrecognized instruction",
                                   self.instr),
                 }
@@ -497,6 +497,21 @@ impl Chip8 {
         self.index += 0x1;
         self.pc += 0x2;
         println!("{:#06X}: LD [index], V[{:X}]", self.instr, reg);
+    }
+
+    /// Instruction: 0xFX65
+    ///
+    /// Load V[0] to V[X] with values from memory starting at the address in
+    /// the index register. Set index to index + X + 1.
+    fn ld_vx_index_imm(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        for i in 0x0..reg + 0x1 {
+            self.v[i] = self.memory[self.index as usize];
+            self.index += 0x1;
+        }
+        self.index += 0x1;
+        self.pc += 0x2;
+        println!("{:#06X}: LD V[{:X}], [index]", self.instr, reg);
     }
 
 }
