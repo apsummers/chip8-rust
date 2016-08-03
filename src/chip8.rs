@@ -149,12 +149,12 @@ impl Chip8 {
             0xF000 => {
                 match self.instr & 0x00FF {
                     0x0007 => self.ld_vx_dt(),
-                    // TODO: 0x000A
+                    0x000A => self.ld_vx_key(),
                     0x0015 => self.ld_dt_vx(),
                     0x0018 => self.ld_st_vx(),
                     0x001E => self.add_index_vx(),
-                    // TODO: 0x0029
-                    // TODO: 0x0033
+                    0x0029 => self.ld_index_vx_sprite(),
+                    0x0033 => self.ld_bcd_vx(),
                     0x0055 => self.ld_index_imm_vx(),
                     0x0065 => self.ld_vx_index_imm(),
                     _ => println!("{:#06X}: Unrecognized instruction",
@@ -482,6 +482,16 @@ impl Chip8 {
         println!("{:#06X}: LD V[{:X}], dt", self.instr, reg);
     }
 
+    /// Instruction: 0xFX0A
+    ///
+    /// Wait for a key press and store the value of the key in V[X].
+    /// TODO: Implement
+    fn ld_vx_key(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.pc += 0x2;
+        println!("{:#06X}: LD V[{:X}], KEY", self.instr, reg);
+    }
+
     /// Instruction: 0xFX15
     ///
     /// Set delay timer to V[X].
@@ -506,10 +516,32 @@ impl Chip8 {
     ///
     /// Add index and V[X] and store the result in index.
     fn add_index_vx(&mut self) {
-        let byte = (self.instr & 0x0F00) >> 8;
-        self.index += byte;
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.index += self.v[reg] as u16;
         self.pc += 0x2;
-        println!("{:#06X}: ADD index, {:#06X}", self.instr, byte);
+        println!("{:#06X}: ADD index, {:#06X}", self.instr, reg);
+    }
+
+    /// Instruction: 0xFX29
+    ///
+    /// Set index to location of sprite for digit V[X].
+    /// TODO: Implement
+    fn ld_index_vx_sprite(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.pc += 0x2;
+        println!("{:#06X}: LD index, V[{:X}]", self.instr, reg);
+    }
+
+    /// Instruction: 0xFX33
+    ///
+    /// Store the BCD (binary coded decimal) representation of V[X] in memory
+    /// locations index, index + 1 and index + 2.
+    /// TODO: Implement
+    fn ld_bcd_vx(&mut self) {
+        let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        let mut value = self.v[reg];
+        self.pc += 0x2;
+        println!("{:#06X}: LD BCD, V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX55
