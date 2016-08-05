@@ -5,3 +5,6 @@ authors = ["Andy Summers <andrew.summers@wisc.edu>"]
 
 [dependencies]
 rand = "0.3"
+
+[dependencies.sdl2]
+git = "https://github.com/AngryLawyer/rust-sdl2"

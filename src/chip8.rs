@@ -29,7 +29,9 @@ pub struct Chip8 {
     st: u8,
 
     // Frame buffer
-    fb: [u8; 64 * 32],
+    pub fb: [u8; 64 * 32],
+
+    pub needs_redraw: bool,
 }
 
 impl Chip8 {
@@ -46,6 +48,7 @@ impl Chip8 {
             dt: 0x0,
             st: 0x0,
             fb: [0x0; 64 * 32],
+            needs_redraw: false,
         }
     }
 
@@ -480,14 +483,15 @@ impl Chip8 {
                         self.v[0xF] = 0x1;
                     }
                     self.fb[pixel_index] ^= 0x1;
+                    self.needs_redraw = true;
                 }
             }
         }
 
         self.pc += 0x2;
         self.print_fb();
-        println!("{:#06X}: DRW V[{:X}], V[{:X}], {:#06X}",
-                 self.instr, reg_x, reg_y, height);
+        //println!("{:#06X}: DRW V[{:X}], V[{:X}], {:#06X}",
+                 //self.instr, reg_x, reg_y, height);
     }
 
     /// Instruction: 0xEX9E
