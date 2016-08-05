@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Andy Summers <andrew.summers@wisc.edu>"]
 
 [dependencies]
+log = "0.3.6"
 rand = "0.3"
 
 [dependencies.sdl2]

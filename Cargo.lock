@@ -2,6 +2,7 @@
 name = "chip8-rust"
 version = "0.1.0"
 dependencies = [
+ "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2 0.22.0 (git+https://github.com/AngryLawyer/rust-sdl2)",
 ]
@@ -19,6 +20,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "libc"
 version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "log"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]

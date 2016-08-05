@@ -1,9 +1,10 @@
+extern crate log;
+extern crate rand;
+
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
-
-extern crate rand;
 
 /// The Chip8
 pub struct Chip8 {
@@ -195,7 +196,7 @@ impl Chip8 {
     fn cls(&mut self) {
         self.fb = [0; 64 * 32];
         self.pc += 0x2;
-        println!("{:#06X}: CLS", self.instr);
+        debug!("{:#06X}: CLS", self.instr);
     }
 
     /// Instruction: 0x00EE
@@ -204,7 +205,7 @@ impl Chip8 {
     fn ret(&mut self) {
         self.pc = self.stack[self.sp as usize];
         self.sp -= 0x1;
-        println!("{:#06X}: RET", self.instr);
+        debug!("{:#06X}: RET", self.instr);
     }
 
     /// Instruction: 0x1NNN
@@ -212,7 +213,7 @@ impl Chip8 {
     /// Jump to location 0xNNN.
     fn jp_addr(&mut self) {
         self.pc = self.instr & 0x0FFF;
-        println!("{:#06X}: JP {:#06X}", self.instr, self.instr & 0x0FFF);
+        debug!("{:#06X}: JP {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0x2NNN
@@ -222,7 +223,7 @@ impl Chip8 {
         self.sp += 0x1;
         self.stack[self.sp as usize] = self.pc;
         self.pc = self.instr & 0x0FFF;
-        println!("{:#06X}: CALL {:#06X}", self.instr, self.instr & 0x0FFF);
+        debug!("{:#06X}: CALL {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0x3XNN
@@ -236,7 +237,7 @@ impl Chip8 {
         } else {
             self.pc += 0x2;
         }
-        println!("{:#06X}: SN V[{:X}], {:#06X}", self.instr, reg, byte);
+        debug!("{:#06X}: SN V[{:X}], {:#06X}", self.instr, reg, byte);
     }
 
     /// Instruction: 0x4XNN
@@ -250,7 +251,7 @@ impl Chip8 {
         } else {
             self.pc += 0x2;
         }
-        println!("{:#06X}: SNE V[{:X}], {:#06X}", self.instr, reg, byte);
+        debug!("{:#06X}: SNE V[{:X}], {:#06X}", self.instr, reg, byte);
     }
 
     /// Instruction: 0x5XY0
@@ -264,7 +265,7 @@ impl Chip8 {
         } else {
             self.pc += 0x2;
         }
-        println!("{:#06X}: SE V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: SE V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x6XNN
@@ -274,7 +275,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.v[reg] = (self.instr & 0x00FF) as u8;
         self.pc += 2;
-        println!("{:#06X}: LD V[{:X}], {:#06X}",
+        debug!("{:#06X}: LD V[{:X}], {:#06X}",
                  self.instr, reg, (self.instr & 0x00FF));
     }
 
@@ -285,7 +286,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.v[reg] += (self.instr & 0x00FF) as u8;
         self.pc += 0x2;
-        println!("{:#06X}: ADD V[{:X}], {:#06X}",
+        debug!("{:#06X}: ADD V[{:X}], {:#06X}",
                  self.instr, reg, self.instr & 0x00FF);
     }
 
@@ -297,7 +298,7 @@ impl Chip8 {
         let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
         self.v[reg_x] = self.v[reg_y];
         self.pc += 0x2;
-        println!("{:#06X}: LD V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: LD V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x8XY1
@@ -308,7 +309,7 @@ impl Chip8 {
         let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
         self.v[reg_x] |= self.v[reg_y];
         self.pc += 0x2;
-        println!("{:#06X}: OR V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: OR V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x8XY2
@@ -319,7 +320,7 @@ impl Chip8 {
         let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
         self.v[reg_x] &= self.v[reg_y];
         self.pc += 0x2;
-        println!("{:#06X}: AND V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: AND V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x8XY3
@@ -330,7 +331,7 @@ impl Chip8 {
         let reg_y = ((self.instr & 0x00F0) >> 4) as usize;
         self.v[reg_x] ^= self.v[reg_y];
         self.pc += 0x2;
-        println!("{:#06X}: XOR V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: XOR V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x8XY4
@@ -366,7 +367,7 @@ impl Chip8 {
             self.v[0xF] = 0x1;
         }
         self.pc += 0x2;
-        println!("{:#06X}: SUB V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: SUB V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x8XY6
@@ -379,7 +380,7 @@ impl Chip8 {
         self.v[0xF] = self.v[reg_x] & 0x01;
         self.v[reg_x] = self.v[reg_x] >> 1;
         self.pc += 0x2;
-        println!("{:#06X}: SHR V[{:X}]", self.instr, reg_x);
+        debug!("{:#06X}: SHR V[{:X}]", self.instr, reg_x);
     }
 
     /// Instruction: 0x8XY7
@@ -397,7 +398,7 @@ impl Chip8 {
             self.v[0xF] = 0x0;
         }
         self.pc += 0x2;
-        println!("{:#06X}: SUBN V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: SUBN V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x8XYE
@@ -410,7 +411,7 @@ impl Chip8 {
         self.v[0xF] = self.v[reg_x] & 0x80;
         self.v[reg_x] = self.v[reg_x] << 1;
         self.pc += 0x2;
-        println!("{:#06X}: SHL V[{:X}]", self.instr, reg_x);
+        debug!("{:#06X}: SHL V[{:X}]", self.instr, reg_x);
     }
 
     /// Instruction: 0x9XY0
@@ -424,7 +425,7 @@ impl Chip8 {
         } else {
             self.pc += 0x2;
         }
-        println!("{:#06X}: SNE V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
+        debug!("{:#06X}: SNE V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0xANNN
@@ -433,7 +434,7 @@ impl Chip8 {
     fn ld_index_addr(&mut self) {
         self.index = self.instr & 0x0FFF;
         self.pc += 0x2;
-        println!("{:#06X}: LD index, {:#06X}", self.instr, self.instr & 0x0FFF);
+        debug!("{:#06X}: LD index, {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0xBNNN
@@ -441,7 +442,7 @@ impl Chip8 {
     /// Jump to location 0xNNN + V[0].
     fn jp_v0_addr(&mut self) {
         self.pc = (self.instr & 0x0FFF) + (self.v[0] as u16);
-        println!("{:#06X}: JP V[0], {:#06X}", self.instr, self.instr & 0x0FFF);
+        debug!("{:#06X}: JP V[0], {:#06X}", self.instr, self.instr & 0x0FFF);
     }
 
     /// Instruction: 0xCXNN
@@ -453,7 +454,7 @@ impl Chip8 {
         let rand_byte = rand::random::<u8>();
         self.v[reg] = rand_byte & byte;
         self.pc += 0x2;
-        println!("{:#06X}: RND V[{:X}], {:#06X}", self.instr, reg, byte);
+        debug!("{:#06X}: RND V[{:X}], {:#06X}", self.instr, reg, byte);
     }
 
     /// Instruction: 0xDXYN
@@ -489,9 +490,9 @@ impl Chip8 {
         }
 
         self.pc += 0x2;
-        self.print_fb();
-        //println!("{:#06X}: DRW V[{:X}], V[{:X}], {:#06X}",
-                 //self.instr, reg_x, reg_y, height);
+        //self.print_fb();
+        debug!("{:#06X}: DRW V[{:X}], V[{:X}], {:#06X}",
+                 self.instr, reg_x, reg_y, height);
     }
 
     /// Instruction: 0xEX9E
@@ -501,7 +502,7 @@ impl Chip8 {
     fn skp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.pc += 0x2;
-        println!("{:#06X}: SKP V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: SKP V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xEXA1
@@ -511,7 +512,7 @@ impl Chip8 {
     fn sknp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.pc += 0x2;
-        println!("{:#06X}: SKNP V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: SKNP V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX07
@@ -521,7 +522,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.v[reg] = self.dt;
         self.pc += 0x2;
-        println!("{:#06X}: LD V[{:X}], dt", self.instr, reg);
+        debug!("{:#06X}: LD V[{:X}], dt", self.instr, reg);
     }
 
     /// Instruction: 0xFX0A
@@ -531,7 +532,7 @@ impl Chip8 {
     fn ld_vx_key(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.pc += 0x2;
-        println!("{:#06X}: LD V[{:X}], KEY", self.instr, reg);
+        debug!("{:#06X}: LD V[{:X}], KEY", self.instr, reg);
     }
 
     /// Instruction: 0xFX15
@@ -541,7 +542,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.dt = self.v[reg];
         self.pc += 0x2;
-        println!("{:#06X}: dt = V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: dt = V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX18
@@ -551,7 +552,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.st = self.v[reg];
         self.pc += 0x2;
-        println!("{:#06X}: st = V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: st = V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX1E
@@ -561,7 +562,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.index += self.v[reg] as u16;
         self.pc += 0x2;
-        println!("{:#06X}: ADD index, V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: ADD index, V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX29
@@ -571,7 +572,7 @@ impl Chip8 {
     fn ld_index_vx_sprite(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         self.pc += 0x2;
-        println!("{:#06X}: LD index, V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: LD index, V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX33
@@ -583,7 +584,7 @@ impl Chip8 {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         let mut value = self.v[reg];
         self.pc += 0x2;
-        println!("{:#06X}: LD BCD, V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: LD BCD, V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX55
@@ -598,7 +599,7 @@ impl Chip8 {
         }
         self.index += 0x1;
         self.pc += 0x2;
-        println!("{:#06X}: LD [index], V[{:X}]", self.instr, reg);
+        debug!("{:#06X}: LD [index], V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xFX65
@@ -613,7 +614,7 @@ impl Chip8 {
         }
         self.index += 0x1;
         self.pc += 0x2;
-        println!("{:#06X}: LD V[{:X}], [index]", self.instr, reg);
+        debug!("{:#06X}: LD V[{:X}], [index]", self.instr, reg);
     }
 
 }

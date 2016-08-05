@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate log;
 extern crate sdl2;
 
 use sdl2::event::Event;
@@ -39,7 +41,8 @@ fn main() {
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
-                Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                Event::Quit {..} |
+                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
                 },
                 _ => { }
@@ -65,13 +68,13 @@ fn main() {
 
                 match renderer.fill_rect(pixel) {
                     Ok(_) => { },
-                    Err(_) => println!("fuck"),
+                    Err(err) => debug!("Couldn't fill pixel: {}", err),
                 }
             }
             renderer.present();
             chip8.needs_redraw = false;
         }
-        println!("{:#?}\n", chip8);
+        debug!("{:#?}\n", chip8);
         sleep(Duration::from_millis(15));
     }
 
