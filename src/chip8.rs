@@ -9,7 +9,7 @@ use std::io::Read;
 /// The Chip8
 pub struct Chip8 {
     // Addressable memory
-    pub memory: [u8; 4096],
+    memory: [u8; 4096],
 
     // Program counter
     pc: u16,
