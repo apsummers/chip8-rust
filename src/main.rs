@@ -1,3 +1,4 @@
+extern crate env_logger;
 #[macro_use]
 extern crate log;
 extern crate sdl2;
@@ -17,6 +18,8 @@ fn main() {
     if env::args().len() != 2 {
         panic!("Usage: chip8-rust PROGRAM");
     }
+
+    env_logger::init().unwrap();
 
     // Initialize Chip8
     let mut chip8 = chip8::Chip8::new();
