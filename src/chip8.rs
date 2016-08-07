@@ -33,7 +33,10 @@ pub struct Chip8 {
     // Frame buffer
     pub fb: [u8; 64 * 32],
 
+    // Redraw flag
     pub needs_redraw: bool,
+
+    pub keyboard: u8,
 }
 
 impl Chip8 {
@@ -51,6 +54,7 @@ impl Chip8 {
             st: 0x0,
             fb: [0x0; 64 * 32],
             needs_redraw: false,
+            keyboard: 0x00,
         }
     }
 
@@ -499,19 +503,28 @@ impl Chip8 {
     /// Instruction: 0xEX9E
     ///
     /// Skip next instruction if the key with the value of V[X] is pressed.
-    /// TODO: Implement
     fn skp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
-        self.pc += 0x2;
+        let key = self.v[reg];
+        if key & self.keyboard != 0 {
+            self.pc += 0x4;
+        } else {
+            self.pc += 0x2;
+        }
         debug!("{:#06X}: SKP V[{:X}]", self.instr, reg);
     }
 
     /// Instruction: 0xEXA1
     ///
     /// Skip next instruction if the key with the value of V[X] is not pressed.
-    /// TODO: Implement
     fn sknp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        let key = self.v[reg];
+        if key & self.keyboard == 0 {
+            self.pc += 0x4;
+        } else {
+            self.pc += 0x2;
+        }
         self.pc += 0x2;
         debug!("{:#06X}: SKNP V[{:X}]", self.instr, reg);
     }
