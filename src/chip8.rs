@@ -289,11 +289,10 @@ impl Chip8 {
     /// Add V[X] and NN and store the result in V[X].
     fn add_vx_byte(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.v[reg] += (self.instr & 0x00FF) as u8;
+        self.pc += 0x2;
         debug!("{:#06X}: ADD V[{:X}], {:#06X}",
                  self.instr, reg, self.instr & 0x00FF);
-        debug!("{:?}", self);
-        self.v[reg].wrapping_add((self.instr & 0x00FF) as u8);
-        self.pc += 0x2;
     }
 
     /// Instruction: 0x8XY0
