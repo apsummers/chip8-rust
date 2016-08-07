@@ -1,5 +1,6 @@
 extern crate log;
 extern crate rand;
+extern crate sdl2;
 
 use std::error::Error;
 use std::fmt;
@@ -568,9 +569,9 @@ impl Chip8 {
     /// Instruction: 0xFX29
     ///
     /// Set index to location of sprite for digit V[X].
-    /// TODO: Implement
     fn ld_index_vx_sprite(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
+        self.index = (self.v[reg] * 0x5) as u16;
         self.pc += 0x2;
         debug!("{:#06X}: LD index, V[{:X}]", self.instr, reg);
     }
@@ -579,10 +580,12 @@ impl Chip8 {
     ///
     /// Store the BCD (binary coded decimal) representation of V[X] in memory
     /// locations index, index + 1 and index + 2.
-    /// TODO: Implement
     fn ld_bcd_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         let mut value = self.v[reg];
+        self.memory[self.index as usize] = self.v[reg] / 100;
+        self.memory[(self.index as usize) + 1] = (self.v[reg] / 10) % 10;
+        self.memory[(self.index as usize) + 2] = (self.v[reg] % 100) % 10;
         self.pc += 0x2;
         debug!("{:#06X}: LD BCD, V[{:X}]", self.instr, reg);
     }
