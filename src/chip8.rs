@@ -289,10 +289,11 @@ impl Chip8 {
     /// Add V[X] and NN and store the result in V[X].
     fn add_vx_byte(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
-        self.v[reg] += (self.instr & 0x00FF) as u8;
-        self.pc += 0x2;
         debug!("{:#06X}: ADD V[{:X}], {:#06X}",
                  self.instr, reg, self.instr & 0x00FF);
+        debug!("{:?}", self);
+        self.v[reg].wrapping_add((self.instr & 0x00FF) as u8);
+        self.pc += 0x2;
     }
 
     /// Instruction: 0x8XY0
@@ -640,10 +641,10 @@ impl fmt::Debug for Chip8 {
         write!(f,
 "Chip8 {{
     pc: {:#06X}\tinstr: {:#06X}\tsp: {:#06X}\tindex: {:#06X}\n
-    v[0]: {:#06X}, v[1]: {:#06X}, v[2]: {:#06X}, v[3]: {:#06X}
-    v[4]: {:#06X}, v[5]: {:#06X}, v[6]: {:#06X}, v[7]: {:#06X}
-    v[8]: {:#06X}, v[9]: {:#06X}, v[A]: {:#06X}, v[B]: {:#06X}
-    v[C]: {:#06X}, v[D]: {:#06X}, v[E]: {:#06X}, v[F]: {:#06X}\n
+    v[0]: {:#04X}, v[1]: {:#04X}, v[2]: {:#04X}, v[3]: {:#04X}
+    v[4]: {:#04X}, v[5]: {:#04X}, v[6]: {:#04X}, v[7]: {:#04X}
+    v[8]: {:#04X}, v[9]: {:#04X}, v[A]: {:#04X}, v[B]: {:#04X}
+    v[C]: {:#04X}, v[D]: {:#04X}, v[E]: {:#04X}, v[F]: {:#04X}\n
     dt: {:#06X}\tst: {:#06X}
 }}", 
                self.pc, self.instr, self.sp, self.index,
