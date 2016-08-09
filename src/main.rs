@@ -59,9 +59,9 @@ fn main() {
 
         chip8.execute_cycle();
 
-        if chip8.needs_redraw {
+        if chip8.redraw {
             display::render(&chip8.fb, &mut renderer);
-            chip8.needs_redraw = false;
+            chip8.redraw = false;
         }
         debug!("{:#?}\n", chip8);
         sleep(Duration::from_millis(15));

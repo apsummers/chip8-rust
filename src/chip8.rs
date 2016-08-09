@@ -2,8 +2,8 @@ extern crate log;
 extern crate rand;
 extern crate sdl2;
 
-use std::error::Error;
 use std::fmt;
+use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 
@@ -34,7 +34,7 @@ pub struct Chip8 {
     pub fb: [u8; 64 * 32],
 
     // Redraw flag
-    pub needs_redraw: bool,
+    pub redraw: bool,
 
     pub keyboard: u8,
 }
@@ -53,7 +53,7 @@ impl Chip8 {
             dt: 0x0,
             st: 0x0,
             fb: [0x0; 64 * 32],
-            needs_redraw: false,
+            redraw: false,
             keyboard: 0x00,
         }
     }
@@ -489,7 +489,7 @@ impl Chip8 {
                         self.v[0xF] = 0x1;
                     }
                     self.fb[pixel_index] ^= 0x1;
-                    self.needs_redraw = true;
+                    self.redraw = true;
                 }
             }
         }
