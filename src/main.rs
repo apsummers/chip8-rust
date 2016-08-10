@@ -45,6 +45,8 @@ fn main() {
     renderer.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
+    let mut pause_emulation = false;
+
     // Main loop
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -53,18 +55,23 @@ fn main() {
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
                 },
+                Event::KeyDown { keycode: Some(Keycode::LCtrl), .. } => {
+                    pause_emulation = !pause_emulation;
+                },
                 _ => { }
             };
         }
 
-        chip8.execute_cycle();
+        if !pause_emulation {
+            chip8.execute_cycle();
 
-        if chip8.redraw {
-            display::render(&chip8.fb, &mut renderer);
-            chip8.redraw = false;
+            if chip8.redraw {
+                display::render(&chip8.fb, &mut renderer);
+                chip8.redraw = false;
+            }
+            debug!("{:#?}\n", chip8);
+            sleep(Duration::from_millis(15));
         }
-        debug!("{:#?}\n", chip8);
-        sleep(Duration::from_millis(15));
     }
 
 }
