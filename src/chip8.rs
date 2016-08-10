@@ -79,10 +79,9 @@ impl Chip8 {
             0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         ];
 
-        let mut i = 0x50;
-        for byte in font_set.bytes() {
-            self.memory[i] = byte.unwrap();
-            i += 1;
+        let font_start = 0x50;
+        for (i, byte) in font_set.bytes().enumerate() {
+            self.memory[font_start + i] = byte.unwrap();
         }
     }
 
@@ -210,6 +209,7 @@ impl Chip8 {
     fn ret(&mut self) {
         self.pc = self.stack[self.sp as usize];
         self.sp -= 0x1;
+        self.pc += 0x2;
         debug!("{:#06X}: RET", self.instr);
     }
 
@@ -355,6 +355,7 @@ impl Chip8 {
             self.v[0xF] = 0x0;
         }
         self.pc += 0x2;
+        debug!("{:#06X}: ADD V[{:X}], V[{:X}]", self.instr, reg_x, reg_y);
     }
 
     /// Instruction: 0x8XY5
@@ -484,15 +485,16 @@ impl Chip8 {
                 let pixel_index = ((x_coord + (x as usize)) + 
                                    ((y_coord + (y as usize)) * 64)) as usize;
                 // Check for collision and set V[F] as appropriate
-                if pixel & (0x80 >> (x as u8)) != 0 {
+                if (pixel & (0x80 >> (x as u8))) != 0 {
                     if self.fb[pixel_index] == 1 {
                         self.v[0xF] = 0x1;
                     }
                     self.fb[pixel_index] ^= 0x1;
-                    self.redraw = true;
                 }
             }
         }
+
+        self.redraw = true;
 
         self.pc += 0x2;
         //self.print_fb();
@@ -609,11 +611,10 @@ impl Chip8 {
     /// register. Set index to index + X + 1.
     fn ld_index_imm_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
-        for i in 0x0..reg + 0x1 {
-            self.memory[self.index as usize] = self.v[i];
-            self.index += 0x1;
+        for i in 0x0..(reg + 0x1) {
+            self.memory[(self.index as usize) + i] = self.v[i];
         }
-        self.index += 0x1;
+        self.index += (reg as u16) + 0x1;
         self.pc += 0x2;
         debug!("{:#06X}: LD [index], V[{:X}]", self.instr, reg);
     }
@@ -624,11 +625,10 @@ impl Chip8 {
     /// the index register. Set index to index + X + 1.
     fn ld_vx_index_imm(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
-        for i in 0x0..reg + 0x1 {
-            self.v[i] = self.memory[self.index as usize];
-            self.index += 0x1;
+        for i in 0x0..(reg + 0x1) {
+            self.v[i] = self.memory[(self.index as usize) + i];
         }
-        self.index += 0x1;
+        self.index += (reg as u16) + 0x1;
         self.pc += 0x2;
         debug!("{:#06X}: LD V[{:X}], [index]", self.instr, reg);
     }

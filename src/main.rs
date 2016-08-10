@@ -58,6 +58,9 @@ fn main() {
                 Event::KeyDown { keycode: Some(Keycode::LCtrl), .. } => {
                     pause_emulation = !pause_emulation;
                 },
+                Event::KeyDown { keycode: Some(Keycode::Num3), .. } => {
+                    chip8.keyboard = 0x3;
+                },
                 _ => { }
             };
         }
