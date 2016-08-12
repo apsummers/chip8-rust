@@ -12,6 +12,7 @@ use std::time::Duration;
 
 pub mod chip8;
 pub mod display;
+pub mod input;
 
 fn main() {
     // Quit if a program to run was not specified on the command line
@@ -58,11 +59,8 @@ fn main() {
                 Event::KeyDown { keycode: Some(Keycode::LCtrl), .. } => {
                     pause_emulation = !pause_emulation;
                 },
-                Event::KeyDown { keycode: Some(Keycode::Num3), .. } => {
-                    chip8.keyboard = 0x3;
-                },
-                _ => { }
-            };
+                _ => input::scan_keyboard(&mut chip8, event),
+            }
         }
 
         if !pause_emulation {
@@ -73,7 +71,7 @@ fn main() {
                 chip8.redraw = false;
             }
             debug!("{:#?}\n", chip8);
-            sleep(Duration::from_millis(15));
+            sleep(Duration::from_millis(2));
         }
     }
 

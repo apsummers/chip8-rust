@@ -5,8 +5,8 @@ use sdl2::render::Renderer;
 pub const PIXEL_SIZE: u32 = 8;
 
 pub fn render(fb: &[u8], renderer: &mut Renderer) {
-    renderer.set_draw_color(Color::RGB(0, 0, 0));
-    renderer.clear();
+    //renderer.set_draw_color(Color::RGB(0, 0, 0));
+    //renderer.clear();
     for (i, val) in fb.iter().enumerate() {
         let x = ((i as i32) % 64) * (PIXEL_SIZE as i32);
         let y = ((i as i32) / 64) * (PIXEL_SIZE as i32);

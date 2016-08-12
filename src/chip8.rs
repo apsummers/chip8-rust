@@ -54,7 +54,7 @@ impl Chip8 {
             st: 0x0,
             fb: [0x0; 64 * 32],
             redraw: false,
-            keyboard: 0x00,
+            keyboard: 0x0,
         }
     }
 
@@ -482,8 +482,13 @@ impl Chip8 {
         for y in 0..height {
             pixel = self.memory[(self.index as usize) + (y as usize)];
             for x in 0..8 {
-                let pixel_index = ((x_coord + (x as usize)) + 
+                let mut pixel_index = ((x_coord + (x as usize)) +
                                    ((y_coord + (y as usize)) * 64)) as usize;
+
+                if pixel_index >= 0x800 {
+                    pixel_index %= 0x800;
+                }
+
                 // Check for collision and set V[F] as appropriate
                 if (pixel & (0x80 >> (x as u8))) != 0 {
                     if self.fb[pixel_index] == 1 {
@@ -508,7 +513,7 @@ impl Chip8 {
     fn skp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         let key = self.v[reg];
-        if key & self.keyboard != 0 {
+        if key & self.keyboard == key {
             self.pc += 0x4;
         } else {
             self.pc += 0x2;
@@ -522,7 +527,7 @@ impl Chip8 {
     fn sknp_vx(&mut self) {
         let reg = ((self.instr & 0x0F00) >> 8) as usize;
         let key = self.v[reg];
-        if key & self.keyboard == 0 {
+        if key & self.keyboard != key {
             self.pc += 0x4;
         } else {
             self.pc += 0x2;
